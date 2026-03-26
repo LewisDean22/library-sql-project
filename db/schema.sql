@@ -39,7 +39,7 @@ CREATE TABLE members (
     member_id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     email_address TEXT UNIQUE NOT NULL, -- regex validation can be done in application code
-    membership_start_date DATE DEFAULT CURRENT_DATE,
+    membership_start_date DATE NOT NULL DEFAULT CURRENT_DATE,
     date_of_birth DATE NOT NULL
 );
 
