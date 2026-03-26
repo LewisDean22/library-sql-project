@@ -1,6 +1,3 @@
-"""
-11. List members who have an unpaid fine, with the fine amount and book title
-"""
 import sqlite3
 import os
 from datetime import date
@@ -141,10 +138,30 @@ def get_all_loan_details(
                    JOIN books ON loans.book_id = books.book_id
                    LEFT JOIN fines ON loans.loan_id = fines.loan_id
                    """)
-    # Thefirst attempt uses an inner join between loans and fines, which only
+    # The first attempt uses an inner join between loans and fines, which only
     # returns rows when a match exists in all tables. Therefore, I only get
     # the loans with a fine, rather than all loans regardless of fine.
     # Therefore, I am now using a LEFT JOIN between from loans to fines.
+    return cursor.fetchall()
+
+
+def get_all_unpaid_fines(
+        conn: sqlite3.Connection
+        ) -> list[tuple[str, str, float]]:
+    """
+    List members who have an unpaid fine, with the fine amount and book title
+    """
+    cursor = conn.cursor()
+    cursor.execute("""
+                   SELECT members.name, books.title, fines.amount
+                   FROM members JOIN loans
+                   ON members.member_id = loans.member_id
+                   JOIN books ON loans.book_id = books.book_id
+                   JOIN fines ON loans.loan_id = fines.loan_id
+                   WHERE fines.date_paid IS NULL
+                   """)
+    # Same SQL as get_all_loan_details but with an inner join at
+    # the end rather than a left join.
     return cursor.fetchall()
 
 
@@ -172,6 +189,111 @@ def get_genres_of_books(
     return results
 
 
+def get_loan_counts(conn: sqlite3.Connection) -> list[tuple[str, int]]:
+    """
+    Count how many loans each member has taken out, ordered by most loans first
+    """
+    cursor = conn.cursor()
+    cursor.execute("""
+                   SELECT members.name, COUNT(*)
+                   FROM members
+                   JOIN loans ON members.member_id = loans.member_id
+                   GROUP BY members.member_id
+                   ORDER BY COUNT(*) DESC
+                   """)
+    # The join combines the members and loans table,
+    # then group by collapses all entries with the same member ID
+    # into one, i.e. records associated with the same member but different
+    # loans are grouped - each group has a count and we return the query
+    # from most to least loans
+    return cursor.fetchall()
+
+
+def get_average_overdue_loan_fine(conn: sqlite3.Connection) -> float:
+    """
+    Find the average fine amount for overdue loans
+    """
+    cursor = conn.cursor()
+    cursor.execute("""
+                   SELECT AVG(amount) FROM fines
+                   WHERE date_paid is NULL
+                   """)
+    average_fine = cursor.fetchone()[0]
+    return 0 if average_fine is None else round(average_fine, 2)
+
+
+def get_most_popular_subgenre(conn: sqlite3.Connection) -> str:
+    """
+    Which genre has the most books assigned to it?
+    I'm excluding the fiction/non-fiction parent genres (trivial)
+    """
+    cursor = conn.cursor()
+    cursor.execute("""
+                   SELECT genres.name FROM genres
+                   JOIN book_genres ON genres.genre_id = book_genres.genre_id
+                   WHERE genres.parent_genre_id IS NOT NULL
+                   GROUP BY genres.genre_id
+                   ORDER BY COUNT(*) DESC
+                   LIMIT 1
+                   """)
+    # LIMIT 1 ensures the max cout genre is returned. If ASC ordering
+    # was used, then LIMIT 1 would give the minimum count genre.
+    return cursor.fetchone()[0]
+
+
+def get_books_never_loaned(conn: sqlite3.Connection) -> list[str]:
+    """
+    Requires a subquery to be made
+    """
+    cursor = conn.cursor()
+    cursor.execute("""
+                   SELECT title FROM books
+                   WHERE book_id NOT IN (SELECT book_id FROM loans)
+                   """)
+    return [title for (title,) in cursor.fetchall()]
+
+
+def get_members_with_fines_exceeding(
+        conn: sqlite3.Connection, n: float
+        ) -> list[str]:
+    """
+    Challenge:
+    List members whose total unpaid fines exceed £5
+    """
+    cursor = conn.cursor()
+    cursor.execute("""
+                   SELECT members.name FROM members
+                   JOIN loans ON members.member_id = loans.member_id
+                   JOIN fines ON loans.loan_id = fines.loan_id
+                   WHERE fines.date_paid IS NULL
+                   GROUP BY members.member_id
+                   HAVING SUM(fines.amount) > ?
+                   """, (n,))
+    return [name for (name,) in cursor.fetchall()]
+
+
+def get_most_borrowed_book(conn: sqlite3.Connection) -> str:
+    cursor = conn.cursor()
+    cursor.execute("""
+                   SELECT title FROM books
+                   JOIN loans ON books.book_id = loans.book_id
+                   GROUP BY books.book_id
+                   ORDER BY COUNT(*) DESC
+                   LIMIT 1
+                   """)
+    return cursor.fetchone()[0]
+
+
+def get_fiction_subgenres(conn: sqlite3.Connection) -> list[str]:
+    cursor = conn.cursor()
+    cursor.execute("""
+                   SELECT name FROM genres
+                   WHERE genres.parent_genre_id =
+                   (SELECT genre_id FROM genres where name LIKE 'fiction')
+                   """)
+    return [genre for (genre,) in cursor.fetchall()]
+
+
 def main() -> None:
     conn = establish_db_connection("library.db")
     try:
@@ -184,7 +306,15 @@ def main() -> None:
         # print(get_authors_for_books(conn))
         # print(get_overdue_loans(conn))
         # print(get_all_loan_details(conn))
-        print(get_genres_of_books(conn))
+        # print(get_all_loan_details(conn))
+        # print(get_all_unpaid_fines(conn))
+        # print(get_loan_counts(conn))
+        # print(get_average_overdue_loan_fine(conn))
+        # print(get_most_popular_subgenre(conn))
+        # print(get_books_never_loaned(conn))
+        # print(get_members_with_fines_exceeding(conn, 5))
+        # print(get_most_borrowed_book(conn))
+        print(get_fiction_subgenres(conn))
     except Exception as e:
         print(e)
     finally:
