@@ -1,6 +1,13 @@
+"""
+CRUD TODO
+- Omit genre CRUD for now
+- Author CRUD needed if book CRUD in use
+- Loans/fines CRUD will require interesting SQL
+"""
 import sqlite3
 import os
-from CRUD.members import add_member, update_member, delete_member
+from CRUD.members import add_member, update_member
+from datetime import date
 # from query_practice import *
 
 
@@ -22,9 +29,9 @@ def establish_db_connection(db_filename: str) -> sqlite3.Connection:
 def main() -> None:
     conn = establish_db_connection("db/library.db")
     try:
-        add_member(conn, "Daisy", "daisy@yahoo.com", "2015-12-15")
+        add_member(conn, "Daisy", "daisy@yahoo.com", date(2015, 12, 15))
         update_member(conn, 7, email_address="daisy2@yahoo.com")
-        delete_member(conn, 7)
+        # delete_member(conn, 7)
     except Exception as e:
         print(e)
     finally:

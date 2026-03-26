@@ -1,27 +1,29 @@
 """
 TODO
-validation for data types since SQLite has type affinity only!
-
-Should DOB be a datetime.date object? - yyyy-mm-dd format
-Use regex for email validation - import from a utils/ module.
-Check type hinting notes to see if I can create a type hint
-based on the regex validating email function.
+validation of data types since SQLite has type affinity only!
 """
 import sqlite3
+from datetime import date
+from utils.validation import validate_email
 
 
 def add_member(conn: sqlite3.Connection,
                name: str,
                email_address: str,
-               date_of_birth: str,
-               membership_start_date: str | None = None
+               date_of_birth: date,
+               membership_start_date: date | None = None
                ) -> None:
-
+    """
+    DOB has date type used here as when str type used,
+    format open to interpretation
+    """
     # Using a dict like this means I can allow the SQL schema default
     # values to apply in the case the Python function is called without
     # an argument being passed for the field. Otherwise, I would need to
     # have IF/ELSE conditions with similiar INSERT commands bar one field
     # depending on whether a non-default arg was passed or not.
+    validate_email(email_address)
+
     fields = {
         "name": name,
         "email_address": email_address,
@@ -61,6 +63,7 @@ def update_member(conn: sqlite3.Connection,
     if name is not None:
         fields["name"] = name
     if email_address is not None:
+        validate_email(email_address)
         fields["email_address"] = email_address
 
     # f-strings can be used for fixed variables defined inside the function
