@@ -1,5 +1,6 @@
 PRAGMA foreign_keys = ON;
 DROP TABLE IF EXISTS fines;
+DROP VIEW IF EXISTS active_loans;
 DROP TABLE IF EXISTS loans;
 DROP TABLE IF EXISTS book_authors; -- junction
 DROP TABLE IF EXISTS book_genres; -- junction
@@ -50,10 +51,18 @@ CREATE TABLE loans (
     loan_date DATE NOT NULL DEFAULT CURRENT_DATE,
     return_by DATE NOT NULL,
     returned_at DATE,    -- NULL means still on loan
-    FOREIGN KEY (book_id) REFERENCES books(book_id),
+    FOREIGN KEY (book_id) REFERENCES books(book_id)
+    ON DELETE RESTRICT,
     FOREIGN KEY (member_id) REFERENCES members(member_id)
+    ON DELETE CASCADE
 );
 
+CREATE VIEW active_loans AS
+SELECT members.name, books.title, loans.return_by
+FROM loans
+JOIN members ON loans.member_id = members.member_id
+JOIN books ON loans.book_id = books.book_id
+WHERE loans.returned_at IS NULL;
 
 -- zero-or-one to one relationship as returning loans in time prevents being fined
 CREATE TABLE fines (
@@ -61,6 +70,7 @@ CREATE TABLE fines (
     amount REAL NOT NULL, -- If default given, fine record created the instant the loan is.
     date_paid DATE,    -- NULL means unpaid
     FOREIGN KEY (loan_id) REFERENCES loans(loan_id)
+    ON DELETE CASCADE
 );
 
 CREATE TABLE book_authors (

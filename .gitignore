@@ -1,2 +1,4 @@
 db/library.db
 **/__pycache__
+library.session.sql
+.vscode/*

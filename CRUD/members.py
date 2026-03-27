@@ -1,6 +1,10 @@
 """
 TODO
 validation of data types since SQLite has type affinity only!
+
+Q: When I delete a member, are all their loans (linked by member ID) and
+hence their fines, also deleted too. Or do I need to do this manually to
+prevent bugs?
 """
 import sqlite3
 from datetime import date

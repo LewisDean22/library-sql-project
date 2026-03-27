@@ -55,6 +55,14 @@ def get_active_loans(conn: sqlite3.Connection) -> list[tuple[str, str]]:
     return cursor.fetchall()
 
 
+def get_active_loans_using_view(
+        conn: sqlite3.Connection
+        ) -> list[tuple[str, str, str]]:
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM active_loans")
+    return cursor.fetchall()
+
+
 def get_authors_for_books(conn: sqlite3.Connection) -> dict[str, list[str]]:
     # List each book with its authors' names
     cursor = conn.cursor()
